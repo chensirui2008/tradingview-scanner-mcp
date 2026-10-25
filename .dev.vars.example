@@ -1,0 +1,5 @@
+# Public by default: leave MCP_API_KEY unset to allow anonymous read-only MCP.
+# To require bearer authentication, uncomment and supply your own strong secret.
+# MCP_API_KEY="replace-with-a-long-random-secret"
+# Optional exact custom domain host (include port if nonstandard), comma-separated.
+# MCP_ALLOWED_HOSTS="scanner.example.com"
