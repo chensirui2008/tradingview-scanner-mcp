@@ -24,6 +24,18 @@ npm run deploy
 ```
 
 项目通过 `cf` CLI、`cloudflare.config.ts` 和 Vite 构建部署，不使用 Wrangler 配置。部署前按 `cf` 提示完成 Cloudflare 登录/授权；部署输出给出实际 Workers URL，连接其 `/mcp` 路径。生产部署前建议设置下述密钥。
+### GitHub Actions 持续集成与部署
+
+远端仓库：[chensirui2008/tradingview-scanner-mcp](https://github.com/chensirui2008/tradingview-scanner-mcp)
+
+项目内置两条 GitHub Actions 工作流：
+- `.github/workflows/ci.yml`：针对 Pull Request 及手动触发，执行代码类型检查 (`typecheck`)、24 项测试 (`test`)、预构建 (`cf build`) 以及预检部署 (`cf deploy --dry-run`)。
+- `.github/workflows/deploy.yml`：针对 `main` 分支代码推送及手动触发，通过类型检查与测试后直接执行生产构建并发布至 Cloudflare Workers。
+
+自动化部署依赖以下 GitHub Repository Secrets：
+- `CLOUDFLARE_ACCOUNT_ID`：Cloudflare 账户 ID。
+- `CLOUDFLARE_API_TOKEN`：具备 Workers Scripts 编辑权限与 Account Settings / User Details 读取权限的 API Token。
+
 
 ### 可选鉴权
 
