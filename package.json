@@ -12,7 +12,8 @@
     "build": "npm run typecheck && cf build",
     "deploy": "npm run typecheck && cf deploy",
     "test": "tsx --test test/*.test.ts",
-    "smoke": "tsx scripts/smoke.ts"
+    "smoke": "tsx scripts/smoke.ts",
+    "validate": "npm run typecheck && npm test"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "2.3.1",
