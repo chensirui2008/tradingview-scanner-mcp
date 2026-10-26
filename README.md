@@ -7,7 +7,7 @@
 
 ## 本地运行与部署
 
-需要 Node.js 22.18+、npm，以及具有 Workers 权限的 Cloudflare 账号。
+需要 Node.js 22.23+、npm，以及具有 Workers 权限的 Cloudflare 账号。
 
 ```sh
 npm ci

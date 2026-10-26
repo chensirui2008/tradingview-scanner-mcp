@@ -64,8 +64,12 @@ try {
   for (const value of scan.data) {
     const row = object(value);
     assert.equal(row.exchange, 'NASDAQ');
-    assert.equal(row.type, 'stock');
-    assert.ok(row.subtype === 'common' || row.subtype === 'dr');
+    assert.ok(row.type === 'stock' || row.type === 'dr');
+    if (row.type === 'dr') {
+      assert.equal(row.subtype, '');
+    } else {
+      assert.notEqual(row.subtype, 'preferred');
+    }
     assert.ok(typeof row.close === 'number' && row.close > 1);
     assert.ok(typeof row.volume === 'number' && row.volume <= previous);
     previous = row.volume;
@@ -91,8 +95,12 @@ try {
     for (const value of result.data) {
       const row = object(value);
       assert.ok(['NASDAQ', 'NYSE', 'AMEX'].includes(String(row.exchange)));
-      assert.equal(row.type, 'stock');
-      assert.ok(row.subtype === 'common' || row.subtype === 'dr');
+      assert.ok(row.type === 'stock' || row.type === 'dr');
+      if (row.type === 'dr') {
+        assert.equal(row.subtype, '');
+      } else {
+        assert.notEqual(row.subtype, 'preferred');
+      }
       const metric = row[preset.field];
       assert.ok(typeof metric === 'number' && preset.accepts(metric), preset.name);
       assert.ok(preset.direction === 'asc' ? metric >= prior : metric <= prior, `${preset.name} ordering`);
@@ -104,16 +112,22 @@ try {
     assert.equal(page.nextOffset, page.hasMore ? 1 + result.data.length : null);
   }
   const snapshots = await call(client, 'get_stock_snapshots', {
-    symbols: ['NASDAQ:AAPL', 'NASDAQ:ZZZZZZ_NONEXISTENT'], fields: ['name', 'close', 'update_mode'],
+    symbols: ['NASDAQ:AAPL', 'NYSE:BABA', 'NASDAQ:ZZZZZZ_NONEXISTENT'], fields: ['name', 'close', 'update_mode'],
   });
   const snapshotMeta = metadata(snapshots);
   assert.ok(Array.isArray(snapshots.data));
   assert.ok(snapshots.data.some((row) => object(row).symbol === 'NASDAQ:AAPL'));
+  assert.ok(snapshots.data.some((row) => object(row).symbol === 'NYSE:BABA'));
   assert.ok(Array.isArray(snapshotMeta.missingSymbols) && snapshotMeta.missingSymbols.includes('NASDAQ:ZZZZZZ_NONEXISTENT'));
   const invalid = await client.callTool({ name: 'scan_stocks', arguments: { fields: ['__not_a_real_field__'] } });
   assert.equal(invalid.isError, true);
   const error = object(object(invalid.structuredContent).error);
   assert.ok(typeof error.code === 'string' && typeof error.message === 'string' && typeof error.requestId === 'string');
+  const schemaInvalid = await client.callTool({ name: 'scan_stocks', arguments: { limit: 0 } });
+  assert.equal(schemaInvalid.isError, true);
+  const schemaError = object(object(schemaInvalid.structuredContent).error);
+  assert.equal(schemaError.code, 'INVALID_ARGUMENTS');
+  assert.ok(typeof schemaError.message === 'string' && typeof schemaError.requestId === 'string');
   await call(client, 'search_fields', { query: 'volume', limit: 1 });
   // A fresh handshake must work without carrying a server-side session forward.
   const second = await connect();

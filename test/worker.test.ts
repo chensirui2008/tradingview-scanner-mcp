@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import worker from '../src/index.js';
-
+import { createServer } from '../src/tools.js';
 const url = 'http://localhost/mcp';
 async function rejected(request: Request, status: number, code: string, env = {}) {
   const response = await worker.fetch(request, env);
@@ -47,4 +49,34 @@ test('custom domains require explicit host configuration', async () => {
   await rejected(new Request('https://custom.example/health'), 403, 'INVALID_HOST');
   const response = await worker.fetch(new Request('https://custom.example/health'), { MCP_ALLOWED_HOSTS: 'custom.example' });
   assert.equal(response.status, 200);
+});
+
+test('default ports on host authority are normalized for health and custom domains', async () => {
+  const resHttpsPort = await worker.fetch(new Request('https://custom.example:443/health', {
+    headers: { Host: 'custom.example:443' },
+  }), { MCP_ALLOWED_HOSTS: 'custom.example' });
+  assert.equal(resHttpsPort.status, 200);
+
+  const resConfiguredWithPort = await worker.fetch(new Request('https://custom.example/health', {
+    headers: { Host: 'custom.example' },
+  }), { MCP_ALLOWED_HOSTS: 'custom.example:443' });
+  assert.equal(resConfiguredWithPort.status, 200);
+
+  const resHttpPort = await worker.fetch(new Request('http://localhost:80/health', {
+    headers: { Host: 'localhost:80' },
+  }));
+  assert.equal(resHttpPort.status, 200);
+});
+
+test('MCP tool schema validation error returns structured error envelope', async () => {
+  const server = createServer();
+  const [c, s] = InMemoryTransport.createLinkedPair();
+  const client = new Client({ name: 'test', version: '1.0.0' });
+  await Promise.all([server.connect(s), client.connect(c)]);
+  const res = await client.callTool({ name: 'scan_stocks', arguments: { limit: 0 } });
+  assert.equal(res.isError, true);
+  const body = res.structuredContent as { error: { code: string; message: string; requestId: string } };
+  assert.equal(body.error.code, 'INVALID_ARGUMENTS');
+  assert.ok(typeof body.error.message === 'string');
+  assert.ok(body.error.requestId);
 });

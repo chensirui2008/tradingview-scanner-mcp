@@ -187,7 +187,7 @@ npm run deploy
 ## Runtime & Tooling Preferences
 
 - **Package Manager**: **`npm`** (uses `package-lock.json`). Always use `npm` / `npm ci`.
-- **Node.js Requirement**: `>=22.18.0` (required for native `node:test`, modern `crypto.subtle`, and ES module support).
+- **Node.js Requirement**: `>=22.23.0` (aligned with pinned CLI and native `node:test`, modern `crypto.subtle`, ES module support).
 - **Runtime Environment**:
   - Execution targets Cloudflare Workers via **`workerd`**.
   - Modern Cloudflare CLI: Uses **`cf`** (`cf dev`, `cf build`, `cf deploy`) and `@cloudflare/vite-plugin`, **not** legacy `wrangler`.

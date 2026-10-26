@@ -45,17 +45,24 @@ async function boundedRequest(request: Request): Promise<Request | Response> {
   for (const chunk of chunks) { body.set(chunk, offset); offset += chunk.byteLength; }
   return new Request(request, { body });
 }
+function normalizeHost(host: string, protocol: string): string {
+  const trimmed = host.trim().toLowerCase();
+  if (protocol === "https:" && trimmed.endsWith(":443")) return trimmed.slice(0, -4);
+  if (protocol === "http:" && trimmed.endsWith(":80")) return trimmed.slice(0, -3);
+  return trimmed;
+}
 
 export async function handleRequest(request: Request, env: WorkerEnv = {}): Promise<Response> {
   const url = new URL(request.url);
   const host = request.headers.get("host");
-  if (host !== null && host.toLowerCase() !== url.host.toLowerCase()) return failure(403, "INVALID_HOST", "Host must match the endpoint");
+  const normalizedUrlHost = normalizeHost(url.host, url.protocol);
+  if (host !== null && normalizeHost(host, url.protocol) !== normalizedUrlHost) return failure(403, "INVALID_HOST", "Host must match the endpoint");
   const origin = request.headers.get("origin");
   if (origin !== null && origin !== url.origin) return failure(403, "INVALID_ORIGIN", "Browser Origin must match the endpoint");
-  const configuredHosts = (env.MCP_ALLOWED_HOSTS ?? "").split(",").map(value => value.trim().toLowerCase()).filter(Boolean);
+  const configuredHosts = (env.MCP_ALLOWED_HOSTS ?? "").split(",").map(value => normalizeHost(value, url.protocol)).filter(Boolean);
   const trustedHost = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)
     || /^tradingview-scanner-mcp\.[a-z0-9-]+\.workers\.dev$/.test(url.hostname)
-    || configuredHosts.includes(url.host.toLowerCase());
+    || configuredHosts.includes(normalizedUrlHost);
   if (!trustedHost) return failure(403, "INVALID_HOST", "Endpoint hostname is not allowed");
   if (url.pathname === "/health") {
     if (request.method !== "GET") return failure(405, "METHOD_NOT_ALLOWED", "Use GET for health", { Allow: "GET" });

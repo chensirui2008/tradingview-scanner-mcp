@@ -198,8 +198,8 @@ class WorkerStockScreener extends StockScreener {
 
 function universeFilters(exchanges: readonly Exchange[]): FilterInput[] {
   return [
-    { field: 'type', operator: 'eq', value: 'stock' },
-    { field: 'subtype', operator: 'in', value: ['common', 'dr'] },
+    { field: 'type', operator: 'in', value: ['stock', 'dr'] },
+    { field: 'subtype', operator: 'ne', value: 'preferred' },
     { field: 'exchange', operator: 'in', value: [...exchanges] },
   ];
 }
@@ -208,8 +208,8 @@ function universe(exchanges: readonly Exchange[]) {
   return {
     description: 'US-listed common stocks and depositary receipts only; not restricted to US-domiciled issuers.',
     exchanges: [...exchanges],
-    securityTypes: ['stock'],
-    subtypes: ['common', 'dr'],
+    securityTypes: ['stock', 'dr'],
+    excludedSubtypes: ['preferred'],
   };
 }
 

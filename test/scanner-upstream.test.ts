@@ -104,8 +104,8 @@ test('caller filters cannot replace the stock universe and explicit sort overrid
       filter: Array<{ left: string; operation: string; right: unknown }>;
       sort: { sortBy: string; sortOrder: string };
     };
-    assert.ok(payload.filter.some((item) => item.left === 'type' && item.operation === 'equal' && item.right === 'stock'));
-    assert.ok(payload.filter.some((item) => item.left === 'subtype' && item.operation === 'in_range' && JSON.stringify(item.right) === '["common","dr"]'));
+    assert.ok(payload.filter.some((item) => item.left === 'type' && item.operation === 'in_range' && JSON.stringify(item.right) === '["stock","dr"]'));
+    assert.ok(payload.filter.some((item) => item.left === 'subtype' && item.operation === 'nequal' && item.right === 'preferred'));
     assert.ok(payload.filter.some((item) => item.left === 'exchange' && item.operation === 'in_range' && JSON.stringify(item.right) === '["NASDAQ"]'));
     assert.ok(payload.filter.some((item) => item.left === 'type' && item.operation === 'equal' && item.right === 'fund'));
     assert.ok(payload.filter.some((item) => item.left === 'change' && item.operation === 'greater' && item.right === 0));
@@ -119,5 +119,23 @@ test('caller filters cannot replace the stock universe and explicit sort overrid
       sort: { field: 'close', direction: 'asc' }, limit: 1,
     });
     assert.deepEqual(result.data, []);
+  });
+});
+
+test('universe filters permit depositary receipts and exclude preferred shares in snapshots', async () => {
+  await withFetch(async (_url, init) => {
+    const payload = JSON.parse(String(init?.body)) as {
+      filter: Array<{ left: string; operation: string; right: unknown }>;
+      symbols?: { tickers?: string[] };
+    };
+    assert.ok(payload.filter.some((item) => item.left === 'type' && item.operation === 'in_range' && JSON.stringify(item.right) === '["stock","dr"]'));
+    assert.ok(payload.filter.some((item) => item.left === 'subtype' && item.operation === 'nequal' && item.right === 'preferred'));
+    assert.deepEqual(payload.symbols?.tickers, ['NYSE:BABA']);
+    return Response.json({ totalCount: 1, data: [{ s: 'NYSE:BABA', d: ['BABA', 99.5] }] });
+  }, async () => {
+    const result = await getStockSnapshots({ symbols: ['NYSE:BABA'], fields: ['name', 'close'] });
+    assert.equal(result.data.length, 1);
+    assert.equal(result.data[0]?.name, 'BABA');
+    assert.deepEqual(result.meta.missingSymbols, []);
   });
 });

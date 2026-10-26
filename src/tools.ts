@@ -17,9 +17,25 @@ async function execute(operation: () => unknown | Promise<unknown>) {
     return { resultType: "complete" as const, isError: true, content: [{ type: "text" as const, text: JSON.stringify(output) }], structuredContent: output };
   }
 }
+interface ToolErrorSink {
+  createToolError(errorMessage: string): unknown;
+}
 
 export function createServer() {
   const server = new McpServer({ name: "tradingview-scanner-mcp", version: "1.0.0" });
+  const errorSink = server as unknown as ToolErrorSink;
+  errorSink.createToolError = (errorMessage: string) => {
+    const requestId = crypto.randomUUID();
+    const isValidation = errorMessage.startsWith("Input validation error") || errorMessage.startsWith("Invalid arguments");
+    const code = isValidation ? "INVALID_ARGUMENTS" : "INTERNAL_ERROR";
+    const output = { error: { code, message: errorMessage, requestId } };
+    return {
+      resultType: "complete" as const,
+      isError: true,
+      content: [{ type: "text" as const, text: JSON.stringify(output) }],
+      structuredContent: output,
+    };
+  };
   server.registerTool("search_fields", {
     description: "Search the community wrapper's raw TradingView field catalogue. Use returned field IDs in scans; catalogue presence does not guarantee upstream availability.",
     inputSchema: fieldSearchSchema, annotations,
